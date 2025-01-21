@@ -259,3 +259,7 @@ body {
       border-radius: 4px;
       margin-right: 10px;
     }
+
+    .client-list-container .quote-button {
+      display: none;
+    }

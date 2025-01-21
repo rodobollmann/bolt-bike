@@ -19,6 +19,8 @@ import React, { useState, useEffect } from 'react';
       const [isPaid, setIsPaid] = useState(false);
       const [quoteStatus, setQuoteStatus] = useState('none');
       const [initialTotal, setInitialTotal] = useState(0);
+      const [quoteValue, setQuoteValue] = useState('');
+      const [discountPercentage, setDiscountPercentage] = useState('');
 
       useEffect(() => {
         const fetchClient = async () => {
@@ -41,6 +43,8 @@ import React, { useState, useEffect } from 'react';
               setIsPaid(data.isPaid || false);
               setQuoteStatus(data.quoteStatus);
               setInitialTotal(data.quoteStatus === 'completed' ? -5000 : 0);
+              setQuoteValue(data.quoteValue || '');
+              setDiscountPercentage(data.discountPercentage || '');
             }
           }
         };
@@ -92,31 +96,50 @@ import React, { useState, useEffect } from 'react';
       };
 
       const calculateTotal = () => {
-        let total = maintenances.reduce((acc, curr) => acc + parseFloat(curr.price || 0), 0);
-        
+        // Validar y calcular el total base de los mantenimientos
+        const total = (Array.isArray(maintenances) ? maintenances : [])
+          .reduce((acc, curr) => acc + (parseFloat(curr.price) || 0), 0);
+
         let discountedTotal = total;
+        let quoteDiscount = 0;
         
-        if (quoteStatus === 'pending' && clientId) {
-          discountedTotal -= 5000;
+        if (quoteValue) {
+          discountedTotal -= parseFloat(quoteValue);
+          quoteDiscount = -parseFloat(quoteValue);
         }
-        
-        if (paymentMethod === 'cash' || paymentMethod === 'transfer') {
-          discountedTotal *= 0.9;
+
+        let paymentDiscount = 0;
+        let finalTotal = discountedTotal;
+        if (paymentMethod === 'cash' || paymentMethod === 'transfer' && discountPercentage) {
+          paymentDiscount = discountedTotal * (parseFloat(discountPercentage) / 100);
+          finalTotal = discountedTotal - paymentDiscount;
         }
-        
-        return (discountedTotal + initialTotal).toFixed(2);
+
+        // Sumar el total inicial
+        const finalTotalWithInitial = finalTotal + (parseFloat(initialTotal) || 0);
+
+        return {
+          total,
+          quoteDiscount,
+          paymentDiscount,
+          finalTotal: finalTotalWithInitial.toFixed(2),
+        };
       };
 
+      const { total, quoteDiscount, paymentDiscount, finalTotal } = calculateTotal();
+
       const handleAccept = async () => {
-        const total = calculateTotal();
+        const totalToSave = calculateTotal().finalTotal;
         const newClient = {
           id: clientId || uuidv4(),
           bike,
           maintenances,
           paymentMethod,
-          total,
+          total: totalToSave,
           isPaid,
           quoteStatus: clientId && quoteStatus === 'pending' ? 'completed' : quoteStatus,
+          quoteValue: parseFloat(quoteValue) || 0,
+          discountPercentage: parseFloat(discountPercentage) || 0,
         };
 
         if (clientId) {
@@ -233,7 +256,38 @@ import React, { useState, useEffect } from 'react';
           <div className="total-section">
             <h3>Total</h3>
             <p>
-              <strong>Total:</strong> ${calculateTotal()}
+              <strong>Subtotal Mantenimientos:</strong> ${total.toFixed(2)}
+            </p>
+            <div className="form-group">
+              <label>Valor Cotización</label>
+              <input
+                type="number"
+                value={quoteValue}
+                onChange={(e) => setQuoteValue(e.target.value)}
+                placeholder="Ingrese valor de cotización"
+              />
+            </div>
+            {quoteValue !== '' && (
+              <p>
+                <strong>Descuento Cotización:</strong> ${quoteDiscount.toFixed(2)}
+              </p>
+            )}
+            <div className="form-group">
+              <label>Descuento %</label>
+              <input
+                type="number"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(e.target.value)}
+                placeholder="Ingrese porcentaje de descuento"
+              />
+            </div>
+            {paymentMethod === 'cash' || paymentMethod === 'transfer' ? (
+              <p>
+                <strong>Descuento por método de pago:</strong> -${paymentDiscount.toFixed(2)}
+              </p>
+            ) : null}
+            <p>
+              <strong>Total:</strong> ${finalTotal}
             </p>
             <div className="form-group">
               <label>Payment Method</label>

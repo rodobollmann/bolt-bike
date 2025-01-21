@@ -27,7 +27,7 @@ import React, { useState, useEffect } from 'react';
       }, []);
 
       const handleQuoteClient = async () => {
-        const newClient = {
+         const newClient = {
           id: uuidv4(),
           bike: { model: '', owner: '' },
           maintenances: [],
@@ -35,6 +35,8 @@ import React, { useState, useEffect } from 'react';
           total: 5000,
           isPaid: false,
           quoteStatus: 'pending',
+          quoteValue: 0,
+          discountPercentage: 0,
         };
         const { error } = await supabase.from('clients').insert([newClient]);
         if (error) {
@@ -52,6 +54,8 @@ import React, { useState, useEffect } from 'react';
           total: 0,
           isPaid: false,
           quoteStatus: 'none',
+          quoteValue: 0,
+          discountPercentage: 0,
         };
         const { error } = await supabase.from('clients').insert([newClient]);
         if (error) {
@@ -102,7 +106,7 @@ import React, { useState, useEffect } from 'react';
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button onClick={handleQuoteClient}>Generate Quote</button>
+          <button onClick={handleQuoteClient} className="quote-button">Generate Quote</button>
           <button onClick={handleCreateMaintenance}>Create Maintenance</button>
           {filteredClients.map((client) => (
             <div key={client.id} className="client-item">
@@ -120,11 +124,6 @@ import React, { useState, useEffect } from 'react';
                   {client.quoteStatus === 'completed' && (
                     <span style={{ marginLeft: '10px', color: 'blue', fontWeight: 'bold' }}>
                       Quote Completed
-                    </span>
-                  )}
-                  {client.quoteStatus === 'none' && (
-                    <span style={{ marginLeft: '10px', color: 'gray', fontWeight: 'bold' }}>
-                      No Quote
                     </span>
                   )}
                 </h3>
